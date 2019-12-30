@@ -1,0 +1,87 @@
+
+#Hashing out
+
+#import Pkg; Pkg.add("CSV")
+# Import CSV package to read csv
+using CSV
+
+Pkg.add("DataFrames")
+using DataFrames
+using LinearAlgebra
+
+# Import Data
+data = CSV.read("C://Users//CDub//Documents/Charles/Resources/git_hub_ex/data.csv")
+data
+
+# Step 1: Align Data ==============================================
+Y = data[:, 1]
+X1 = data[:, 2:4]
+
+# Add ones needed for matrix multiplication
+X = insertcols!(X1, 1, :ones => fill(1, 19))
+
+# Step 2: Create X'X matrix
+XX = transpose(Matrix(X)) * Matrix(X)
+
+# Step 3: Create X'Y Matrix
+XY = transpose(Matrix(X)) * Y
+
+#Step 4: Inverse of X'X
+XX_inv = inv(XX)
+
+# Step 5: b: coefficients
+b = XX_inv * XY
+
+# Step 6: P Matrix Var & Covariance and Standard Errors=========
+P = Matrix(X) * (XX_inv * transpose(Matrix(X)))
+
+# Check to see columns and rows sum to 1
+# Rows
+sum(P, dims = 1)
+# Columns
+sum(P, dims = 2)
+
+# Step 7: ANOVA==========================================================
+YY  = transpose(Y) * Y
+YJY = sum(Y)^2 / length(Y)
+
+# Residual SS
+bXY = transpose(b) * transpose(Matrix(X)) * Y
+
+df_reg   = 3
+df_res   = length(Y) - df_reg - 1
+df_total = df_reg + df_res
+
+ss_reg   = bXY - YJY
+ss_res   = YY - bXY
+ss_total = ss_reg + ss_res
+
+ms_reg   = ss_reg / df_reg
+ms_res   = ss_res / df_res
+
+F_stat = ms_reg / ms_res
+
+# Step 8: Predicted Values & Residuals
+b_var = ms_res * XX_inv
+
+stand_err = map(sqrt, diag(b_var))
+
+pred_Y = P * Y
+resids = Y - pred_Y
+
+# OLS function
+# Add GLM package for lm function
+Pkg.add("GLM")
+using GLM
+
+# Use the original data where Y = DAX; X = SMI, CAC, & FTSE
+model = lm(@formula(DAX ~ SMI + CAC + FTSE), data)
+
+# Model summary
+print(model)
+
+# Model predictions
+predict(model)
+
+# Model residuals
+residuals(model)
